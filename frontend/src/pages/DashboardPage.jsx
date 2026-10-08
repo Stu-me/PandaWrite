@@ -109,6 +109,27 @@ function DashboardPage() {
     }
   }
 
+  // Creates and opens a page directly from a workspace so users do not need an extra navigation step.
+  const handleQuickCreatePage = async (workspace) => {
+    try {
+      const response = await pageService.create({ title: 'Untitled page', workspace: workspace._id })
+      if (workspace._id === activeWorkspace?._id) setPages((currentPages) => [...currentPages, response.data])
+      navigate(`/page/${response.data._id}`)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to create a page in this workspace')
+    }
+  }
+
+  // Updates the saved/starred state immediately so the dashboard feels responsive.
+  const handleToggleStar = async (pageId) => {
+    try {
+      const response = await pageService.toggleStar(pageId)
+      setPages((currentPages) => currentPages.map((page) => page._id === pageId ? response.data : page))
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to update the starred page')
+    }
+  }
+
   const handleConfirmDelete = async () => {
     if (!deleteConfirm) return
 
@@ -164,6 +185,14 @@ function DashboardPage() {
                   {ws.name}
                 </span>
                 <button
+                  onClick={() => handleQuickCreatePage(ws)}
+                  className="rounded p-1 text-[var(--text-secondary)] hover:bg-[var(--accent-light)] hover:text-[var(--accent)]"
+                  aria-label={`Create page in ${ws.name}`}
+                  title="New page"
+                >
+                  <Icon name="plus" className="h-3.5 w-3.5" />
+                </button>
+                <button
                   onClick={() => setDeleteConfirm({
                     type: 'workspace',
                     id: ws._id,
@@ -214,6 +243,13 @@ function DashboardPage() {
                       <Icon name="file" className="mb-5 h-5 w-5 text-[var(--accent)]" />
                       <p className="font-medium text-[var(--text-primary)]">{page.title}</p>
                     </div>
+                    <button
+                      onClick={() => handleToggleStar(page._id)}
+                      className={`absolute top-3 right-10 rounded p-1.5 text-xs transition ${page.isStarred ? 'text-[var(--gold)] opacity-100' : 'text-[var(--text-secondary)] opacity-0 hover:text-[var(--gold)] group-hover:opacity-100'}`}
+                      aria-label={page.isStarred ? 'Remove from starred pages' : 'Add to starred pages'}
+                    >
+                      <Icon name="star" className={`h-4 w-4 ${page.isStarred ? 'fill-current' : ''}`} />
+                    </button>
                     <button
                       onClick={() => setDeleteConfirm({
                         type: 'page',

@@ -4,7 +4,7 @@ const blockSchema = mongoose.Schema({
     type:{ // what type of data in the block 
         type:String,
         required:true,
-        enum:['text','heading','todo','image','audio','youtube']
+        enum:['text','heading','todo','image','audio','youtube','document']
     },
     order:{ 
         type:Number,

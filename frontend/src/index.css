@@ -96,3 +96,27 @@ button, a, input, textarea, select { transition: background-color 160ms ease, bo
 .audio-wave-bar:nth-child(3n) { animation-delay: -0.45s; }
 .audio-wave-bar:nth-child(5n) { animation-delay: -0.65s; }
 @keyframes audio-wave-pulse { from { transform: scaleY(0.35); } to { transform: scaleY(2.4); } }
+
+/* ─── Page transition ────────────────────────────────────────────────────────
+   .page-enter plays a 300 ms fade + subtle upward slide every time the
+   component is mounted (i.e. each route change re-keys the wrapper div).
+   Only `opacity` and `transform` are animated so the browser can run the
+   animation entirely on the GPU compositor thread — no layout, no paint.
+   The `will-change` hint lets the browser promote the layer before the
+   animation starts, eliminating jank on first render.
+──────────────────────────────────────────────────────────────────────────── */
+@keyframes page-soft-slide {
+  from { opacity: 0.3; transform: translateY(6px); }
+  to   { opacity: 1;   transform: translateY(0);   }
+}
+
+.page-enter {
+  animation: page-soft-slide 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, transform;
+}
+
+/* Respect users who prefer reduced motion (accessibility). */
+@media (prefers-reduced-motion: reduce) {
+  .page-enter { animation: none; }
+}
+

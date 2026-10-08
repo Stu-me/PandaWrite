@@ -41,7 +41,10 @@ const getAllPages = asyncHandler(async(req,res)=>{
         filter.workspace = workspace._id;
     }
 
-    const pages = await Page.find(filter);
+    // The profile menu uses this query to fetch only pages the user explicitly starred.
+    if (req.query.starred === 'true') filter.isStarred = true;
+
+    const pages = await Page.find(filter).sort({ updatedAt: -1 });
     //only returns the pages of that user who is logged in  and what the workspace he need
     return res.status(200).json(pages);
 })
@@ -107,6 +110,49 @@ const updatePage = asyncHandler(async(req,res)=>{
     );
      return res.status(200).json(updatedPage)
 })
+
+// Toggles a page's saved/starred state without changing its title or contents.
+const toggleStarredPage = asyncHandler(async (req, res) => {
+    const page = await Page.findById(req.params.id);
+    if (!page) {
+        res.status(404);
+        throw new Error('Page not found');
+    }
+    if (page.createdBy.toString() !== req.user._id.toString()) {
+        res.status(403);
+        throw new Error('You are not authorized to update this page');
+    }
+    page.isStarred = !page.isStarred;
+    await page.save();
+    return res.status(200).json(page);
+});
+
+// Makes a page available in the public blog, or returns it to private mode.
+const togglePageSharing = asyncHandler(async (req, res) => {
+    const page = await Page.findById(req.params.id);
+    if (!page) { res.status(404); throw new Error('Page not found'); }
+    if (page.createdBy.toString() !== req.user._id.toString()) { res.status(403); throw new Error('You are not authorized to share this page'); }
+    if (page.blogStatus === 'suspended') { res.status(403); throw new Error('This blog has been suspended by an administrator'); }
+    page.isShared = !page.isShared;
+    await page.save();
+    return res.status(200).json(page);
+});
+
+// Public readers only see posts that the author shared and an administrator has not suspended.
+const getPublicPages = asyncHandler(async (_req, res) => {
+    const pages = await Page.find({ isShared: true, blogStatus: 'published' })
+        .select('title createdBy createdAt updatedAt')
+        .populate('createdBy', 'name')
+        .sort({ updatedAt: -1 });
+    return res.status(200).json(pages);
+});
+
+const getPublicPage = asyncHandler(async (req, res) => {
+    const page = await Page.findOne({ _id: req.params.id, isShared: true, blogStatus: 'published' }).populate('createdBy', 'name');
+    if (!page) { res.status(404); throw new Error('Blog post not found'); }
+    const blocks = await Block.find({ page: page._id }).sort({ order: 1 });
+    return res.status(200).json({ page, blocks });
+});
 // @desc Delete a page
 // @route DELETE /pages/:id
 // @access private
@@ -131,4 +177,4 @@ const deletePage = asyncHandler(async(req,res)=>{
      return res.status(200).json({message:"Page deleted"})
 })
 
-module.exports = {getPage,getAllPages,createPage,updatePage,deletePage  }
+module.exports = {getPage,getAllPages,createPage,updatePage,toggleStarredPage,togglePageSharing,getPublicPages,getPublicPage,deletePage  }

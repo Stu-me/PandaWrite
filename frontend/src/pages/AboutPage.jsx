@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import pandaHero from '../assets/KungFuPanda.jpg'
+import pandaHero from '../assets/images.jpg'
 import Icon from '../components/Icon'
 
 const features = [

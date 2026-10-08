@@ -4,12 +4,13 @@ const asyncHandler = require("express-async-handler");
 
 // Ensures embeds point to web URLs instead of unsupported or unsafe URL schemes.
 const validateEmbedContent = (type, content) => {
-  if (!['image', 'youtube'].includes(type) || !content) return;
+  if (!['image', 'youtube', 'document'].includes(type) || !content) return;
   try {
     const url = new URL(content);
     if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Unsupported URL protocol');
   } catch {
-    const error = new Error(`${type === 'youtube' ? 'YouTube' : 'Image'} blocks require a valid http(s) URL`);
+    const label = type === 'youtube' ? 'YouTube' : type === 'document' ? 'Document' : 'Image';
+    const error = new Error(`${label} blocks require a valid http(s) URL`);
     error.statusCode = 400;
     throw error;
   }

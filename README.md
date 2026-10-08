@@ -252,3 +252,32 @@ npm run dev
 ## Summary
 
 This project is a Notion-style app with token-based auth, workspace/page/block ownership, password reset via email, and a React frontend scaffold ready for the next UI layer. If someone reads this README, they should understand what the app is, how the data flows, how the API is organized, and what is already built versus what is still pending.
+
+## Project Growth
+
+This section records meaningful UI improvements made to the project over time, including the reasoning and implementation methods used.
+
+### Smooth Page Transitions (August 2026)
+
+**What was added**
+
+A `PageTransition` wrapper component (`frontend/src/components/PageTransition.jsx`) that plays a 300 ms entrance animation on every route change. The Navbar stays visually anchored while only the content below it fades in.
+
+**Why**
+
+Before this change, navigation between routes was an instant DOM swap — functional but visually jarring. An imperceptible entrance animation communicates to the user that the page has changed without disorienting them. It also makes the app feel polished and intentional, which matters for a productivity tool where users spend long sessions.
+
+**UI methods used**
+
+1. **CSS keyframe animation (`@keyframes page-fade-slide-up`)** — animates only `opacity` (0 → 1) and `transform: translateY` (14px → 0). These two properties are the only ones the browser can animate on the GPU compositor thread without triggering layout or paint, so the animation is hardware-accelerated and costs virtually nothing in CPU time.
+
+2. **`cubic-bezier(0.22, 1, 0.36, 1)` easing** — an "ease-out spring" curve that feels snappy at the start and settles gently. The page arrives quickly (< 100 ms) then coasts to rest, matching modern OS-level transition conventions.
+
+3. **React key-based remounting** — `PageTransition` reads the current `pathname` from React Router's `useLocation` hook and passes it as the `key` prop on a wrapper `<div>`. Every time the pathname changes, React treats the old div and new div as different elements and unmounts/remounts, which re-triggers the CSS animation from scratch. This avoids any JavaScript animation library.
+
+4. **`will-change: opacity, transform`** — hints to the browser that these properties are about to animate, prompting it to promote the element to its own compositor layer *before* the animation starts. This eliminates the first-frame jank that can occur when the browser must decide mid-animation whether to create a new layer.
+
+5. **`prefers-reduced-motion` media query** — users who have set "reduce motion" in their OS accessibility settings receive the page content instantly (`animation: none`) rather than any motion, in compliance with WCAG 2.1 Success Criterion 2.3.3.
+
+6. **Layered application** — the `Layout` component (which holds the Navbar) wraps only the `<Outlet />` in `PageTransition`, so the Navbar itself does not re-animate on navigation. Standalone auth pages (Login, Register, etc.) each receive their own `PageTransition` wrapper directly in `App.jsx` for the same effect.
+

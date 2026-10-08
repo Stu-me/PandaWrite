@@ -16,4 +16,6 @@ export const adminService = {
   getSubscriptions: () => api.get('/api/admin/subscriptions'),
   suspendSubscription: (userId) => api.patch(`/api/admin/subscriptions/${userId}/suspend`),
   updateUserSubscriptionStatus: (userId, action) => api.patch(`/api/admin/users/${userId}/subscription-status`, { action }),
+  getBlogs: () => api.get('/api/admin/blogs'),
+  updateBlogStatus: (blogId, action) => api.patch(`/api/admin/blogs/${blogId}/status`, { action }),
 }

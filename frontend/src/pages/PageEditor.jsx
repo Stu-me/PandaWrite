@@ -4,10 +4,13 @@ import { pageService } from '../services/pageService'
 import { blockService } from '../services/blockService'
 import BlockRow from '../components/BlockRow'
 import ConfirmModal from '../components/ConfirmModal'
+import Icon from '../components/Icon'
 import { useBlocksReducer } from '../hooks/useBlocksReducer'
 import { useDebouncedSave } from '../hooks/useDebouncedSave'
+import { usePageTabs } from '../hooks/usePageTabs'
+import PageTabs from '../components/PageTabs'
 
-const BLOCK_TYPES = ['text', 'heading', 'todo', 'image', 'audio', 'youtube']
+const BLOCK_TYPES = ['text', 'heading', 'todo', 'image', 'audio', 'youtube', 'document']
 const SPOTIFY_STORAGE_KEY = 'pandawrite-spotify-embed-url'
 const DEFAULT_SPOTIFY_LINK = 'https://open.spotify.com/track/6xr4S4BNFVaHlwlkYzyj6R?si=467c9c73a03f4201'
 
@@ -71,6 +74,7 @@ function PageEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { state, dispatch } = useBlocksReducer()
+  const { openTab, renameTab } = usePageTabs()
   const { blocks, status } = state
   const blockRefs = useRef({})
 
@@ -87,13 +91,15 @@ function PageEditor() {
         blockService.getAllForPage(id),
       ])
       setPage(pageRes.data)
+      // Opening a page from any workspace adds it to the shared editor tab strip.
+      openTab({ id: pageRes.data._id, title: pageRes.data.title })
       dispatch({ type: 'SET_BLOCKS', payload: blocksRes.data })
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load page')
     } finally {
       setPageLoading(false)
     }
-  }, [dispatch, id])
+  }, [dispatch, id, openTab])
 
   useEffect(() => {
     // This starts an asynchronous API request; its state updates happen after it resolves.
@@ -160,7 +166,7 @@ function PageEditor() {
 
   const handleTypeChange = (block, type) => {
     // Media blocks require a URL or recording, so clear incompatible text when switching types.
-    const content = ['image', 'audio', 'youtube'].includes(type) ? '' : block.content
+    const content = ['image', 'audio', 'youtube', 'document'].includes(type) ? '' : block.content
     const properties = type === 'heading' ? { headingLevel: 'h2', color: 'default' } : type === 'text' ? { textStyle: 'normal', color: 'default' } : {}
     const updatedBlock = { ...block, type, content, properties }
     dispatch({ type: 'UPDATE_BLOCK_TYPE', payload: { id: block._id, type } })
@@ -257,8 +263,18 @@ function PageEditor() {
     try {
       const res = await pageService.update(id, { title: trimmedTitle })
       setPage(res.data)
+      renameTab(id, res.data.title)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update title')
+    }
+  }
+
+  const handleShare = async () => {
+    try {
+      const response = await pageService.toggleSharing(id)
+      setPage(response.data)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to update sharing')
     }
   }
 
@@ -270,14 +286,10 @@ function PageEditor() {
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start">
         <SpotifyPlayer />
         <div className="min-h-screen bg-[var(--bg-card)] p-2 sm:p-4 lg:p-6">
+      <PageTabs activePageId={id} />
       <div className="flex justify-between items-center mb-6">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="text-sm text-[var(--text-secondary)] hover:text-[var(--accent)] transition"
-        >
-          ← Back to dashboard
-        </button>
-        <SaveStatus status={status} />
+        <button onClick={() => navigate('/dashboard')} className="text-sm text-[var(--text-secondary)] hover:text-[var(--accent)] transition">← Back to dashboard</button>
+        <div className="flex items-center gap-3"><button onClick={handleShare} disabled={page.blogStatus === 'suspended'} title={page.isShared ? 'This page is public' : 'This page is private'} className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${page.isShared ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)]'} disabled:cursor-not-allowed disabled:opacity-50`}><Icon name={page.isShared ? 'share' : 'lock'} className="h-3.5 w-3.5" />{page.isShared ? 'Shared' : 'Private'}</button><SaveStatus status={status} /></div>
       </div>
 
       {error && <p className="text-red-500 text-sm mb-4">{error}</p>}

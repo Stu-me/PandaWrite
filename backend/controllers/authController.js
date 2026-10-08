@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken')
 const sendEmail = require('../utils/sendEmail')
 const {userInputValidator,userLoginValidator} = require('../middlewares/userValidator');
 const { log } = require('console');
-const remeberTime = '30'
+const remeberTime = '30m'
 
 // will put in utility folder after checking the flow 
 
@@ -122,7 +122,7 @@ const  forgotPassword = asyncHandler(async(req,res)=>{
     await user.save(); // this line act as user.update() for the user. changes we did 
 
     //email the token 
-    const clientUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const clientUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
     const resetURL = `${clientUrl}/reset-password/${resetToken}`;
     const message = `
     You requested password reset.

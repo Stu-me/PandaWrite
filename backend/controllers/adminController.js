@@ -3,6 +3,7 @@ const User = require('../models/userModel');
 const Subscription = require('../models/subscriptionModel');
 const PaymentRequest = require('../models/paymentRequestModel');
 const SupportQuery = require('../models/supportQueryModel');
+const Page = require('../models/pageModel');
 const { getPlan } = require('../config/subscriptionPlans');
 
 const ONLINE_WINDOW_MS = 1 * 60 * 1000;
@@ -249,10 +250,29 @@ const updateUserSubscriptionStatus = asyncHandler(async (req, res) => {
   }
 });
 
+const getAdminBlogs = asyncHandler(async (_req, res) => {
+  const blogs = await Page.find({ isShared: true }).populate('createdBy', 'name email').sort({ updatedAt: -1 });
+  return res.status(200).json(blogs);
+});
+
+const updateBlogStatus = asyncHandler(async (req, res) => {
+  const { action } = req.body;
+  if (!['suspend', 'restore'].includes(action)) { res.status(400); throw new Error('Action must be suspend or restore'); }
+  const page = await Page.findById(req.params.id);
+  if (!page || !page.isShared) { res.status(404); throw new Error('Shared blog not found'); }
+  page.blogStatus = action === 'suspend' ? 'suspended' : 'published';
+  page.suspendedAt = action === 'suspend' ? new Date() : undefined;
+  page.suspendedBy = action === 'suspend' ? req.user._id : undefined;
+  await page.save();
+  return res.status(200).json(page);
+});
+
 module.exports = { 
   getAdminOverview, 
   getAdminUsers, 
   getAdminNotifications, 
   resolveSupportQuery,
-  updateUserSubscriptionStatus 
+  updateUserSubscriptionStatus,
+  getAdminBlogs,
+  updateBlogStatus,
 };

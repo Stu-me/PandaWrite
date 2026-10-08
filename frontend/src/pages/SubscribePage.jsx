@@ -159,7 +159,7 @@ function SubscribePage() {
         </section>
       )}
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {freeTier && (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-6 shadow-sm">
             <p className="text-lg font-bold text-[var(--text-primary)]">{freeTier.name}</p>
@@ -177,13 +177,19 @@ function SubscribePage() {
             type="button"
             key={planName}
             onClick={() => setSelectedPlan(planName)}
-            className={`rounded-xl border p-6 text-left transition bg-[var(--bg-card)] ${
-              selectedPlan === planName ? 'border-[var(--accent)] ring-2 ring-[var(--accent-ring)] shadow-[var(--shadow-card)]' : 'border-[var(--border)] hover:border-[var(--text-secondary)] shadow-sm'
+            className={`relative overflow-hidden rounded-xl border p-6 text-left transition bg-[var(--bg-card)] ${
+              selectedPlan === planName ? 'border-[var(--accent)] ring-2 ring-[var(--accent-ring)] shadow-[var(--shadow-card)]' : 'border-[var(--border)] hover:border-[var(--accent)] shadow-sm'
             }`}
           >
-            <p className="text-lg font-bold text-[var(--text-primary)] capitalize">{planName}</p>
-            <p className="mt-2 text-3xl font-bold text-[var(--text-primary)]">₹{plan.amount}</p>
+            {plan.badge && <span className={`absolute right-0 top-0 rounded-bl-xl px-3 py-1 text-xs font-bold ${planName === 'quarterly' ? 'bg-[var(--accent)] text-white' : 'bg-[var(--gold-light)] text-[var(--gold)]'}`}>{plan.badge}</span>}
+            <p className="text-lg font-bold text-[var(--text-primary)]">{plan.name || planName}</p>
+            <p className="mt-3 text-3xl font-bold text-[var(--text-primary)]">₹{plan.amount}</p>
             <p className="mt-1 text-sm text-[var(--text-secondary)]">{plan.durationDays} days of access</p>
+            {plan.savings && <p className="mt-3 inline-flex rounded-full bg-[var(--accent-light)] px-2.5 py-1 text-xs font-bold text-[var(--accent)]">{plan.savings}</p>}
+            <p className="mt-4 min-h-10 text-sm leading-5 text-[var(--text-secondary)]">{plan.description}</p>
+            <ul className="mt-4 space-y-2 border-t border-[var(--border)] pt-4 text-xs text-[var(--text-secondary)]">
+              {(plan.highlights || ['Unlimited access']).map((highlight) => <li key={highlight} className="flex gap-2"><span className="font-bold text-[var(--accent)]">✓</span>{highlight}</li>)}
+            </ul>
           </button>
         ))}
       </section>

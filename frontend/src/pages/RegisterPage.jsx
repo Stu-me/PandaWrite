@@ -1,14 +1,12 @@
 import { useState } from 'react'
 import { useNavigate ,Link } from 'react-router-dom'
 import { authService } from '../services/authService'
-import { useAuth } from '../hooks/useAuth'
 
 function RegisterPage() {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const { login } = useAuth()
   const navigate = useNavigate()
 
   const handleChange = (e) => {
@@ -21,9 +19,9 @@ function RegisterPage() {
     setLoading(true)
 
     try {
-      const response = await authService.register(formData)
-      login(response.data, response.data.token)
-      navigate('/dashboard', { replace: true })
+      await authService.register(formData)
+      // Registration intentionally ends at a confirmation screen; users choose when to begin a session.
+      navigate('/registration-success', { replace: true, state: { name: formData.name } })
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed')
     } finally {

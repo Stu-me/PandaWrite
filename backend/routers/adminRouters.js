@@ -8,7 +8,7 @@ const {
   getSubscriptions,
   suspendSubscription,
 } = require('../controllers/paymentController');
-const { getAdminOverview, getAdminUsers, getAdminNotifications, resolveSupportQuery, updateUserSubscriptionStatus } = require('../controllers/adminController');
+const { getAdminOverview, getAdminUsers, getAdminNotifications, resolveSupportQuery, updateUserSubscriptionStatus, getAdminBlogs, updateBlogStatus } = require('../controllers/adminController');
 
 // Admin-only routes: every route below requires authentication and master-admin role.
 const router = express.Router();
@@ -19,6 +19,8 @@ router.get('/users', getAdminUsers);
 router.get('/notifications', getAdminNotifications);
 router.patch('/queries/:id/resolve', resolveSupportQuery);
 router.patch('/users/:userId/subscription-status', updateUserSubscriptionStatus);
+router.get('/blogs', getAdminBlogs);
+router.patch('/blogs/:id/status', updateBlogStatus);
 router.get('/payments', getPaymentRequests);
 router.patch('/payments/:id/approve', approvePaymentRequest);
 router.patch('/payments/:id/reject', rejectPaymentRequest);

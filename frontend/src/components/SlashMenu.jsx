@@ -2,9 +2,10 @@ const OPTIONS = [
   { type: 'text', label: 'Text', hint: 'Plain paragraph' },
   { type: 'heading', label: 'Heading', hint: 'Section title' },
   { type: 'todo', label: 'To-do', hint: 'Checklist item' },
-  { type: 'image', label: 'Image', hint: 'Embed via URL' },
+  { type: 'image', label: 'Image', hint: 'Upload or paste a URL' },
   { type: 'audio', label: 'Audio', hint: 'Record a voice note' },
   { type: 'youtube', label: 'YouTube', hint: 'Embed a video URL' },
+  { type: 'document', label: 'Document', hint: 'Upload a PDF or Word file' },
 ]
 
 function SlashMenu({ onSelect }) {

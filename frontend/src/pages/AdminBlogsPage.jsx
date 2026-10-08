@@ -1,0 +1,12 @@
+import { useEffect, useState } from 'react'
+import { adminService } from '../services/adminService'
+
+function AdminBlogsPage() {
+  const [blogs, setBlogs] = useState([]); const [error, setError] = useState(''); const [busy, setBusy] = useState('')
+  const load = () => adminService.getBlogs().then((response) => setBlogs(response.data)).catch((err) => setError(err.response?.data?.message || 'Unable to load blogs.'))
+  useEffect(() => { load() }, [])
+  const changeStatus = async (blog, action) => { setBusy(blog._id); try { await adminService.updateBlogStatus(blog._id, action); await load() } catch (err) { setError(err.response?.data?.message || 'Unable to update blog.') } finally { setBusy('') } }
+  return <main className="min-h-screen bg-[var(--bg)] p-4 sm:p-6"><div className="mx-auto max-w-5xl"><header className="mb-8"><p className="text-sm font-semibold text-[var(--accent)]">MASTER ADMIN</p><h1 className="mt-1 text-3xl font-bold text-[var(--text-primary)]">Blog moderation</h1><p className="mt-2 text-sm text-[var(--text-secondary)]">Suspend inappropriate shared pages or restore them for public reading.</p></header>{error && <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}<section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-card)]"><div className="divide-y divide-[var(--border)]">{blogs.map((blog) => <article key={blog._id} className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold text-[var(--text-primary)]">{blog.title}</p><p className="mt-1 text-sm text-[var(--text-secondary)]">{blog.createdBy?.name || 'Unknown author'} · {blog.createdBy?.email}</p><span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${blog.blogStatus === 'suspended' ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>{blog.blogStatus}</span></div><button disabled={busy === blog._id} onClick={() => changeStatus(blog, blog.blogStatus === 'suspended' ? 'restore' : 'suspend')} className={`rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50 ${blog.blogStatus === 'suspended' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>{blog.blogStatus === 'suspended' ? 'Restore blog' : 'Suspend blog'}</button></article>)}</div>{blogs.length === 0 && <p className="p-8 text-center text-sm text-[var(--text-secondary)]">No shared blogs to moderate.</p>}</section></div></main>
+}
+
+export default AdminBlogsPage
