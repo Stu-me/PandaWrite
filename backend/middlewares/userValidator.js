@@ -11,7 +11,19 @@ const userLoginValidator = z.object({
     password: z.string().min(8)
 });
 
+const loginOtpRequestValidator = z.object({
+    email: z.string().email(),
+});
+
+const loginOtpVerifyValidator = z.object({
+    email: z.string().email(),
+    otp: z.string().regex(/^\d{6}$/, 'OTP must contain exactly 6 digits'),
+    rememberMe: z.boolean().optional(),
+});
+
 module.exports = {
     userInputValidator,
-    userLoginValidator
+    userLoginValidator,
+    loginOtpRequestValidator,
+    loginOtpVerifyValidator,
 };

@@ -4,9 +4,17 @@ const bcrypt = require('bcryptjs'); // good for deployement
 const crypto = require('crypto'); 
 const jwt = require('jsonwebtoken')
 const sendEmail = require('../utils/sendEmail')
-const {userInputValidator,userLoginValidator} = require('../middlewares/userValidator');
-const { log } = require('console');
+const {
+    userInputValidator,
+    userLoginValidator,
+    loginOtpRequestValidator,
+    loginOtpVerifyValidator,
+} = require('../middlewares/userValidator');
 const remeberTime = '30m'
+
+const LOGIN_OTP_EXPIRY_MS = 10 * 60 * 1000;
+const LOGIN_OTP_RESEND_COOLDOWN_MS = 60 * 1000;
+const LOGIN_OTP_MAX_ATTEMPTS = 5;
 
 // will put in utility folder after checking the flow 
 
@@ -81,6 +89,105 @@ const loginUser = asyncHandler(async(req,res)=>{
         email:validUser.email,
         role: validUser.role,
         token
+    });
+});
+
+// Sends a short-lived login code without revealing whether the email exists.
+const requestLoginOtp = asyncHandler(async (req, res) => {
+    const { email } = loginOtpRequestValidator.parse(req.body);
+    const user = await User.findOne({ email });
+
+    if (user) {
+        const now = Date.now();
+        const lastRequestedAt = user.loginOtpRequestedAt?.getTime() || 0;
+
+        if (now - lastRequestedAt < LOGIN_OTP_RESEND_COOLDOWN_MS) {
+            // Keep the response identical for known and unknown email addresses.
+            return res.status(200).json({
+                message: 'If an account exists for that email, a login code has been sent.',
+            });
+        }
+
+        const otp = crypto.randomInt(100000, 1000000).toString();
+        user.loginOtpHash = crypto.createHash('sha256').update(otp).digest('hex');
+        user.loginOtpExpires = new Date(now + LOGIN_OTP_EXPIRY_MS);
+        user.loginOtpAttempts = 0;
+        user.loginOtpRequestedAt = new Date(now);
+        await user.save();
+
+        try {
+            await sendEmail({
+                email: user.email,
+                subject: 'Your Pandawrite login code',
+                text: `Your Pandawrite login code is ${otp}. It expires in 10 minutes.`,
+                html: `<p>Your Pandawrite login code is <strong>${otp}</strong>.</p><p>This code expires in 10 minutes.</p>`,
+            });
+        } catch (error) {
+            // Do not leave a usable OTP behind when delivery fails.
+            user.loginOtpHash = undefined;
+            user.loginOtpExpires = undefined;
+            user.loginOtpAttempts = 0;
+            user.loginOtpRequestedAt = undefined;
+            await user.save();
+            throw error;
+        }
+    }
+
+    res.status(200).json({
+        message: 'If an account exists for that email, a login code has been sent.',
+    });
+});
+
+// Verifies the code and issues the same JWT returned by password login.
+const verifyLoginOtp = asyncHandler(async (req, res) => {
+    const { email, otp, rememberMe } = loginOtpVerifyValidator.parse(req.body);
+    const user = await User.findOne({ email });
+
+    if (!user || !user.loginOtpHash || !user.loginOtpExpires) {
+        res.status(401);
+        throw new Error('Invalid or expired login code.');
+    }
+
+    if (user.loginOtpExpires.getTime() <= Date.now()) {
+        user.loginOtpHash = undefined;
+        user.loginOtpExpires = undefined;
+        user.loginOtpAttempts = 0;
+        await user.save();
+        res.status(401);
+        throw new Error('Invalid or expired login code.');
+    }
+
+    if (user.loginOtpAttempts >= LOGIN_OTP_MAX_ATTEMPTS) {
+        res.status(429);
+        throw new Error('Too many incorrect attempts. Request a new login code.');
+    }
+
+    user.loginOtpAttempts += 1;
+    const submittedOtpHash = crypto.createHash('sha256').update(otp).digest('hex');
+    const isValidOtp = crypto.timingSafeEqual(
+        Buffer.from(user.loginOtpHash, 'hex'),
+        Buffer.from(submittedOtpHash, 'hex')
+    );
+
+    if (!isValidOtp) {
+        await user.save();
+        res.status(401);
+        throw new Error('Invalid or expired login code.');
+    }
+
+    user.loginOtpHash = undefined;
+    user.loginOtpExpires = undefined;
+    user.loginOtpAttempts = 0;
+    user.loginOtpRequestedAt = undefined;
+    await user.save();
+
+    const token = generateToken(user._id, rememberMe === true ? '30d' : remeberTime);
+    res.status(200).json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        token,
     });
 });
 
@@ -193,4 +300,12 @@ const resetPassword  = asyncHandler(async(req,res)=>{
     });
 });
 
-module.exports = {registerUser,loginUser,userInfo,forgotPassword,resetPassword}
+module.exports = {
+    registerUser,
+    loginUser,
+    requestLoginOtp,
+    verifyLoginOtp,
+    userInfo,
+    forgotPassword,
+    resetPassword,
+};

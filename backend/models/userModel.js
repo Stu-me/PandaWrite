@@ -21,6 +21,19 @@ const userSchema = mongoose.Schema(
     resetPasswordExpire:{
       type:Date
     },
+    loginOtpHash: {
+      type: String,
+    },
+    loginOtpExpires: {
+      type: Date,
+    },
+    loginOtpAttempts: {
+      type: Number,
+      default: 0,
+    },
+    loginOtpRequestedAt: {
+      type: Date,
+    },
     currentStreak: { type: Number, default: 0 },
     lastActiveDate: { type: Date },
     role: {
